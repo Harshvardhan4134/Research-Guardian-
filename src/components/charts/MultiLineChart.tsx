@@ -28,8 +28,8 @@ export function MultiLineChart({
   height?: number;
 }) {
   const width = 520;
-  const bg = "rgba(255,255,255,0.03)";
-  const grid = "rgba(148,163,184,0.18)";
+  const bg = "var(--card-muted)";
+  const grid = "rgba(100,116,139,0.22)";
 
   return (
     <svg
@@ -39,7 +39,11 @@ export function MultiLineChart({
       role="img"
       aria-label="Topic Intelligence chart"
       className="block"
-      style={{ background: bg, borderRadius: 12, border: "1px solid var(--border)" }}
+      style={{
+        background: bg,
+        borderRadius: 12,
+        border: "1px solid var(--border)",
+      }}
     >
       {[0.2, 0.4, 0.6, 0.8].map((t) => (
         <line

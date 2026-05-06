@@ -145,7 +145,7 @@ export default function Home() {
   const health = snapshot?.systemHealth;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text)]">
       <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-black/25 backdrop-blur-xl">
         <div className="mx-auto max-w-[1200px] px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -158,11 +158,9 @@ export default function Home() {
               className="h-[40px] w-auto"
             />
             <div className="leading-tight">
-              <div className="text-base font-bold tracking-[-0.02em]">
-                Guardian AI – Research &amp; Analytics Hub
-              </div>
-              <div className="text-[12.5px] text-[var(--text-muted)]">
-                Real-time model-driven intelligence dashboard
+              <div className="text-base font-bold tracking-[-0.02em]">GUARDIAN AI</div>
+              <div className="text-[12px] text-[var(--text-muted)]">
+                Where Safety Meets Technology
               </div>
             </div>
           </div>
@@ -170,26 +168,32 @@ export default function Home() {
           <nav className="flex items-center gap-2" aria-label="Utility">
             <button
               type="button"
-              className="rounded-lg border border-[var(--border)] bg-white/5 px-3.5 py-2 text-sm font-semibold hover:bg-white/10"
+              className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] px-2 py-2"
               onClick={() => setHistory([])}
             >
-              Clear history
+              Settings
             </button>
             <button
               type="button"
-              className="rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-black hover:brightness-110"
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
               onClick={() => setReportOpen(true)}
               disabled={!snapshot}
             >
-              Generate Report
+              Export Data
             </button>
           </nav>
         </div>
       </header>
 
       <main className="mx-auto max-w-[1200px] px-5 py-6 pb-12 space-y-6">
-        <section className="glass rounded-[var(--radius)] overflow-hidden">
-          <div className="px-5 py-5 flex items-start justify-between gap-4 flex-wrap">
+        <section className="rounded-[var(--radius)] overflow-hidden border border-[var(--border)] bg-[var(--card)] shadow-sm">
+          <div
+            className="px-5 py-4 text-white flex items-start justify-between gap-4 flex-wrap"
+            style={{
+              background:
+                "linear-gradient(135deg, #0b1220 0%, #0f2a6b 50%, #0b1220 100%)",
+            }}
+          >
             <div className="min-w-[240px]">
               <div className="text-lg font-bold">AI Research &amp; Investigation Console</div>
               <div className="mt-1 text-sm text-[var(--text-muted)] max-w-[52ch]">
@@ -198,20 +202,16 @@ export default function Home() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Badge tone="info">
-                <span className="h-2 w-2 rounded-full bg-cyan-300" />
-                Live
-              </Badge>
               <button
                 type="button"
-                className="rounded-lg border border-[var(--border)] bg-white/5 px-3.5 py-2 text-sm font-semibold hover:bg-white/10"
+                className="text-sm font-medium text-white/80 hover:text-white px-2 py-2"
                 onClick={() => setQuery("")}
               >
                 Clear
               </button>
               <button
                 type="button"
-                className="rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-black hover:brightness-110 disabled:opacity-60"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
                 onClick={() => runResearch()}
                 disabled={loading}
               >
@@ -232,7 +232,7 @@ export default function Home() {
                 placeholder={
                   "Examples:\n- Why did hate speech spike last weekend?\n- Analyze misinformation trends around elections (last 30 days)\n- Identify emerging scam or fraud patterns\n- Predict risk growth for political content next week"
                 }
-                className="w-full min-h-[150px] max-h-[320px] resize-y rounded-xl border border-[var(--border)] bg-black/25 px-4 py-4 pb-8 text-sm leading-relaxed outline-none focus:border-[var(--border-strong)] focus:ring-2 focus:ring-emerald-400/25"
+                className="w-full min-h-[150px] max-h-[320px] resize-y rounded-xl border border-[var(--border)] bg-white px-4 py-4 pb-8 text-sm leading-relaxed outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
               />
               <div className="absolute bottom-2 right-3 text-xs text-[var(--text-muted)]">
                 {charCountLabel}
@@ -246,7 +246,7 @@ export default function Home() {
             ) : null}
 
             <div className="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
-              <div className="lg:col-span-5 rounded-xl border border-[var(--border)] bg-white/5 p-4">
+              <div className="lg:col-span-5 rounded-xl border border-[var(--border)] bg-[var(--card-muted)] p-4">
                 <div className="text-sm font-bold">Data Sources for Research</div>
                 <div className="mt-3 space-y-2 text-sm text-[var(--text)]">
                   {[
@@ -263,7 +263,7 @@ export default function Home() {
                         onChange={(e) =>
                           setSources((s) => ({ ...s, [row.key]: e.target.checked }))
                         }
-                        className="h-[18px] w-[18px] accent-emerald-400"
+                        className="h-[18px] w-[18px] accent-blue-600"
                       />
                       <span className="text-[var(--text)]">{row.label}</span>
                     </label>
@@ -277,13 +277,13 @@ export default function Home() {
                   <div className="mt-2 flex gap-2 flex-wrap">
                     <button
                       type="button"
-                      className="rounded-lg border border-[var(--border)] bg-black/25 px-3.5 py-2 text-[13px] font-semibold hover:bg-white/10"
+                      className="rounded-lg border border-[var(--border)] bg-white px-3.5 py-2 text-[13px] font-semibold hover:bg-slate-50"
                     >
                       Upload File
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border border-[var(--border)] bg-black/25 px-3.5 py-2 text-[13px] font-semibold hover:bg-white/10"
+                      className="rounded-lg border border-[var(--border)] bg-white px-3.5 py-2 text-[13px] font-semibold hover:bg-slate-50"
                     >
                       Add URL
                     </button>
@@ -294,7 +294,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="lg:col-span-4 rounded-xl border border-[var(--border)] bg-white/5 p-4">
+              <div className="lg:col-span-4 rounded-xl border border-[var(--border)] bg-[var(--card-muted)] p-4">
                 <div className="text-sm font-bold">Research Filters</div>
                 <div className="mt-3 space-y-3">
                   <div>
@@ -307,6 +307,7 @@ export default function Home() {
                         setFilters((f) => ({ ...f, dateRange: e.target.value as ResearchFilters["dateRange"] }))
                       }
                       className="w-full rounded-lg border border-[var(--border)] bg-black/25 px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                      style={{ background: "white" }}
                     >
                       <option value="24h">Last 24h</option>
                       <option value="7d">Last 7 days</option>
@@ -325,6 +326,7 @@ export default function Home() {
                         setFilters((f) => ({ ...f, region: e.target.value as ResearchFilters["region"] }))
                       }
                       className="w-full rounded-lg border border-[var(--border)] bg-black/25 px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                      style={{ background: "white" }}
                     >
                       <option value="global">Global</option>
                       <option value="north-america">North America</option>
@@ -345,6 +347,7 @@ export default function Home() {
                         setFilters((f) => ({ ...f, language: e.target.value as ResearchFilters["language"] }))
                       }
                       className="w-full rounded-lg border border-[var(--border)] bg-black/25 px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                      style={{ background: "white" }}
                     >
                       <option value="all">All</option>
                       <option value="english">English</option>
@@ -365,6 +368,7 @@ export default function Home() {
                         setFilters((f) => ({ ...f, contentType: e.target.value as ResearchFilters["contentType"] }))
                       }
                       className="w-full rounded-lg border border-[var(--border)] bg-black/25 px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                      style={{ background: "white" }}
                     >
                       <option value="all">All</option>
                       <option value="text">Text</option>
@@ -384,6 +388,7 @@ export default function Home() {
                         setFilters((f) => ({ ...f, riskCategory: e.target.value as ResearchFilters["riskCategory"] }))
                       }
                       className="w-full rounded-lg border border-[var(--border)] bg-black/25 px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                      style={{ background: "white" }}
                     >
                       <option value="all">All</option>
                       <option value="hate-speech">Hate Speech</option>
@@ -396,7 +401,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="lg:col-span-3 rounded-xl border border-[var(--border)] bg-white/5 p-4">
+              <div className="lg:col-span-3 rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
                 <div className="text-sm font-bold">Research Mode</div>
                 <div className="mt-3 space-y-2">
                   {[
@@ -409,7 +414,7 @@ export default function Home() {
                       <label
                         key={m.key}
                         className={`block cursor-pointer rounded-xl border px-3.5 py-3 transition ${
-                          active ? "border-emerald-400/35 bg-emerald-400/10" : "border-[var(--border)] bg-black/25 hover:bg-white/5"
+                          active ? "border-emerald-200 bg-emerald-50" : "border-[var(--border)] bg-white hover:bg-slate-50"
                         }`}
                       >
                         <input
@@ -441,7 +446,7 @@ export default function Home() {
                             setQuery(h.query);
                             setMode(h.mode);
                           }}
-                          className="w-full text-left rounded-lg border border-[var(--border)] bg-black/25 px-3 py-2 hover:bg-white/5"
+                          className="w-full text-left rounded-lg border border-[var(--border)] bg-white px-3 py-2 hover:bg-slate-50"
                         >
                           <div className="text-xs font-semibold text-[var(--text)] truncate">
                             {h.query || "(empty query)"}

@@ -94,7 +94,7 @@ export function CoordinationNetwork({
         aria-label="Coordination network graph"
         className="block"
         style={{
-          background: "rgba(255,255,255,0.03)",
+          background: "var(--card-muted)",
           borderRadius: 12,
           border: "1px solid var(--border)",
         }}
@@ -113,8 +113,8 @@ export function CoordinationNetwork({
       >
         <defs>
           <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(34,211,238,0.22)" />
-            <stop offset="100%" stopColor="rgba(34,211,238,0)" />
+            <stop offset="0%" stopColor="rgba(37,99,235,0.18)" />
+            <stop offset="100%" stopColor="rgba(37,99,235,0)" />
           </radialGradient>
         </defs>
 
@@ -129,7 +129,7 @@ export function CoordinationNetwork({
               y1={a.y}
               x2={b.x}
               y2={b.y}
-              stroke="rgba(148,163,184,0.22)"
+              stroke="rgba(100,116,139,0.22)"
               strokeWidth="1"
             />
           );
@@ -143,7 +143,7 @@ export function CoordinationNetwork({
               cy={n.y}
               r={n.id === draggingId ? 7 : 6}
               fill={riskColor(n.risk_score)}
-              stroke="rgba(255,255,255,0.18)"
+              stroke="rgba(15,23,42,0.18)"
               strokeWidth="1"
               onPointerDown={(e) => {
                 e.currentTarget.setPointerCapture(e.pointerId);

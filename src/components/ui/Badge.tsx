@@ -11,13 +11,13 @@ export function Badge({
 }) {
   const tones: Record<typeof tone, string> = {
     neutral:
-      "border-[var(--border)] bg-white/5 text-[var(--text)]",
+      "border-[var(--border)] bg-[var(--card)] text-[var(--text)]",
     success:
-      "border-emerald-400/25 bg-emerald-400/10 text-emerald-200",
+      "border-emerald-200 bg-emerald-50 text-emerald-700",
     warning:
-      "border-amber-400/25 bg-amber-400/10 text-amber-200",
-    danger: "border-rose-400/25 bg-rose-400/10 text-rose-200",
-    info: "border-cyan-400/25 bg-cyan-400/10 text-cyan-200",
+      "border-amber-200 bg-amber-50 text-amber-700",
+    danger: "border-rose-200 bg-rose-50 text-rose-700",
+    info: "border-sky-200 bg-sky-50 text-sky-700",
   };
 
   return (

@@ -43,7 +43,7 @@ export function ForecastChart({
       .map((p) => `${p.x} ${p.y}`)
       .join(" L ")} Z`;
 
-  const grid = "rgba(148,163,184,0.18)";
+  const grid = "rgba(100,116,139,0.22)";
 
   return (
     <svg
@@ -54,7 +54,7 @@ export function ForecastChart({
       aria-label="Forecast Engine chart"
       className="block"
       style={{
-        background: "rgba(255,255,255,0.03)",
+        background: "var(--card-muted)",
         borderRadius: 12,
         border: "1px solid var(--border)",
       }}
@@ -71,12 +71,12 @@ export function ForecastChart({
         />
       ))}
 
-      <path d={bandPath} fill="rgba(167,139,250,0.16)" stroke="none" />
+      <path d={bandPath} fill="rgba(37,99,235,0.10)" stroke="none" />
 
       <polyline
         points={ptsA.map((p) => `${p.x},${p.y}`).join(" ")}
         fill="none"
-        stroke="rgba(34,211,238,0.92)"
+        stroke="rgba(15,23,42,0.85)"
         strokeWidth="2.2"
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -85,7 +85,7 @@ export function ForecastChart({
       <polyline
         points={ptsP.map((p) => `${p.x},${p.y}`).join(" ")}
         fill="none"
-        stroke="rgba(167,139,250,0.95)"
+        stroke="rgba(37,99,235,0.85)"
         strokeWidth="2.2"
         strokeLinejoin="round"
         strokeLinecap="round"
