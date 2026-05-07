@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { MultiLineChart } from "@/components/charts/MultiLineChart";
@@ -36,11 +35,39 @@ function riskTone(score: number) {
   return "success";
 }
 
+function pad2(n: number) {
+  return n < 10 ? `0${n}` : `${n}`;
+}
+
+function formatGeneratedAt(iso: string) {
+  const d = new Date(iso);
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const y = d.getFullYear();
+  let hour = d.getHours();
+  const ampm = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+  return `${m}/${day}/${y}, ${hour}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())} ${ampm}`;
+}
+
+function downloadText(filename: string, text: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 const DEFAULT_SOURCES: DataSourcesSelection = {
   platformContent: true,
-  userBehaviorLogs: true,
-  moderationHistory: true,
-  policyEnforcementLogs: true,
+  userBehaviorLogs: false,
+  moderationHistory: false,
+  policyEnforcementLogs: false,
   externalThreatFeeds: true,
 };
 
@@ -53,7 +80,9 @@ const DEFAULT_FILTERS: ResearchFilters = {
 };
 
 export default function Home() {
-  const [query, setQuery] = useState("Guardian AI dashboard health snapshot");
+  const [consoleOpen, setConsoleOpen] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
+  const [query, setQuery] = useState("");
   const [mode, setMode] = useState<ResearchMode>("quick");
   const [sources, setSources] = useState<DataSourcesSelection>(DEFAULT_SOURCES);
   const [filters, setFilters] = useState<ResearchFilters>(DEFAULT_FILTERS);
@@ -61,9 +90,17 @@ export default function Home() {
   const [snapshot, setSnapshot] = useState<ResearchSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<
+    { query: string; mode: ResearchMode; at: string }[]
+  >([]);
 
   const [reportOpen, setReportOpen] = useState(false);
   const closeXRef = useRef<HTMLButtonElement | null>(null);
+
+  const charCountLabel = useMemo(
+    () => `${query.length.toLocaleString()} / 2,000`,
+    [query.length],
+  );
 
   const updatedLabel = useMemo(() => {
     if (!snapshot?.explanation.updatedAt) return null;
@@ -98,17 +135,18 @@ export default function Home() {
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
       const data = (await res.json()) as ResearchSnapshot;
       setSnapshot(data);
+      if (!opts?.silent) {
+        setHistory((h) => [
+          { query: data.request.query, mode: data.request.mode, at: data.explanation.updatedAt },
+          ...h,
+        ].slice(0, 12));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to run research");
     } finally {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    runResearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -140,23 +178,50 @@ export default function Home() {
   const graph = snapshot?.graphNetwork;
   const health = snapshot?.systemHealth;
 
+  const reportId = useMemo(() => {
+    if (!snapshot?.explanation.updatedAt) return null;
+    const ms = new Date(snapshot.explanation.updatedAt).getTime();
+    return `GRD-${ms}`;
+  }, [snapshot?.explanation.updatedAt]);
+
+  const enabledSources = useMemo(() => {
+    const out: string[] = [];
+    if (sources.platformContent) out.push("Platform Content");
+    if (sources.userBehaviorLogs) out.push("User Behavior Logs");
+    if (sources.moderationHistory) out.push("Moderation History");
+    if (sources.policyEnforcementLogs) out.push("Policy Enforcement Logs");
+    if (sources.externalThreatFeeds) out.push("External Threat & Trend Feeds");
+    return out;
+  }, [sources]);
+
   return (
     <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text)]">
       <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-white/80 backdrop-blur-xl">
         <div className="mx-auto max-w-[1200px] px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <Image
-              src="/guardian-logo.png"
-              alt="Guardian AI logo"
-              width={170}
-              height={52}
-              priority
-              className="h-[40px] w-auto"
-            />
+            <div
+              className="h-10 w-10 rounded-xl border border-[var(--border)] bg-white grid place-items-center"
+              aria-hidden="true"
+              style={{ boxShadow: "var(--shadow)" }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M12 2.2l8.2 4.7v10.2L12 21.8 3.8 17.1V6.9L12 2.2Z"
+                  stroke="rgba(13,148,136,0.95)"
+                  strokeWidth="1.8"
+                />
+                <path
+                  d="M7.6 10.4c1.3-2.2 4.9-2.9 7.1-1.1 2.3 1.9 2.1 5.7-.6 7.2-2.7 1.5-6.1.1-6.9-2.4"
+                  stroke="rgba(37,99,235,0.9)"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
             <div className="leading-tight">
-              <div className="text-base font-bold tracking-[-0.02em]">GUARDIAN AI</div>
+              <div className="text-base font-bold tracking-[-0.02em]">Guardian AI</div>
               <div className="text-[12px] text-[var(--text-muted)]">
-                Where Safety Meets Technology
+                Research &amp; Analytics Dashboard
               </div>
             </div>
           </div>
@@ -167,7 +232,7 @@ export default function Home() {
               className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] px-2 py-2"
               onClick={() => setReportOpen(true)}
             >
-              Settings
+              ⚙ Settings
             </button>
             <button
               type="button"
@@ -175,43 +240,384 @@ export default function Home() {
               onClick={() => setReportOpen(true)}
               disabled={!snapshot}
             >
-              Export Data
+              ⬇ Export Data
             </button>
           </nav>
         </div>
       </header>
 
       <main className="mx-auto max-w-[1200px] px-5 py-6 pb-12 space-y-6">
-        <section className="glass rounded-[var(--radius)] p-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+        {/* SECTION 1 — AI Research & Investigation Console */}
+        <section className="rounded-[var(--radius)] overflow-hidden border border-[var(--border)] bg-[var(--card)] shadow-sm">
+          <button
+            type="button"
+            className="w-full px-5 py-4 text-white flex items-start justify-between gap-4 flex-wrap text-left"
+            onClick={() => setConsoleOpen((v) => !v)}
+            aria-expanded={consoleOpen}
+            style={{
+              background: "linear-gradient(135deg, #0B1220 0%, #0F2A6B 55%, #0B1220 100%)",
+            }}
+          >
+            <div className="flex items-start gap-3 min-w-[260px]">
+              <div className="h-9 w-9 rounded-lg bg-white/10 border border-white/20 grid place-items-center">
+                <span className="text-white text-base" aria-hidden="true">
+                  🔍
+                </span>
+              </div>
+              <div>
+                <div className="text-base font-bold">AI Research &amp; Investigation Console</div>
+                <div className="mt-0.5 text-sm text-white/85 max-w-[68ch]">
+                  Ask questions, upload data, and run AI-powered research across platform intelligence
+                </div>
+              </div>
+            </div>
+            <div
+              className="h-9 w-9 rounded-full border border-white/15 bg-white/10 grid place-items-center"
+              aria-hidden="true"
+            >
+              <span className="text-white/90 text-base font-bold">
+                {consoleOpen ? "▴" : "▾"}
+              </span>
+            </div>
+          </button>
+
+          {consoleOpen ? (
+            <div className="px-5 pb-5 pt-5">
+              <div className="relative">
+                <label htmlFor="research-input" className="visually-hidden">
+                  Research question
+                </label>
+                <textarea
+                  id="research-input"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value.slice(0, 2000))}
+                  placeholder={
+                    "Examples:\n- Why did hate speech spike last weekend?\n- Analyze misinformation trends around elections (last 30 days)\n- Identify emerging scam or fraud patterns\n- Predict risk growth for political content next week"
+                  }
+                  className="w-full min-h-[150px] max-h-[320px] resize-y rounded-xl border border-[var(--border)] bg-white px-4 py-4 pb-8 text-sm leading-relaxed outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                />
+                <div className="absolute bottom-2 right-3 text-xs text-[var(--text-muted)]">
+                  {charCountLabel}
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+                <button
+                  type="button"
+                  className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] inline-flex items-center gap-2"
+                  onClick={() => setShowHistory((v) => !v)}
+                >
+                  <span aria-hidden="true">⏱</span> Research History
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] px-2 py-2"
+                    onClick={() => setQuery("")}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
+                    onClick={() => runResearch()}
+                    disabled={loading || query.trim().length === 0}
+                  >
+                    ▶ Run Research
+                  </button>
+                </div>
+              </div>
+
+              {showHistory && history.length ? (
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {history.slice(0, 6).map((h, idx) => (
+                    <button
+                      key={`${h.at}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        setQuery(h.query);
+                        setMode(h.mode);
+                      }}
+                      className="text-left rounded-xl border border-[var(--border)] bg-[var(--card-muted)] px-4 py-3 hover:bg-white"
+                    >
+                      <div className="text-xs font-semibold text-[var(--text)] truncate">
+                        {h.query || "(empty query)"}
+                      </div>
+                      <div className="mt-1 text-[11px] text-[var(--text-muted)]">
+                        {h.mode.toUpperCase()} · {fmtAgo(h.at)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {error ? (
+                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              ) : null}
+
+              <div className="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
+                <div className="lg:col-span-5 rounded-xl border border-[var(--border)] bg-[var(--card-muted)] p-4">
+                  <div className="text-sm font-bold inline-flex items-center gap-2">
+                    <span aria-hidden="true">🗄️</span> Data Sources for Research
+                  </div>
+                  <div className="mt-3 space-y-2 text-sm text-[var(--text)]">
+                    {[
+                      { key: "platformContent", label: "Platform Content" },
+                      { key: "userBehaviorLogs", label: "User Behavior Logs" },
+                      { key: "moderationHistory", label: "Moderation History" },
+                      { key: "policyEnforcementLogs", label: "Policy Enforcement Logs" },
+                      { key: "externalThreatFeeds", label: "External Threat & Trend Feeds" },
+                    ].map((row) => (
+                      <label key={row.key} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={sources[row.key as keyof DataSourcesSelection]}
+                          onChange={(e) =>
+                            setSources((s) => ({ ...s, [row.key]: e.target.checked }))
+                          }
+                          className="h-[18px] w-[18px] accent-emerald-600"
+                        />
+                        <span className="text-[var(--text)]">{row.label}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                      External Data Input
+                    </div>
+                    <div className="mt-2 flex gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        className="rounded-lg border border-[var(--border)] bg-white px-3.5 py-2 text-[13px] font-semibold hover:bg-slate-50"
+                      >
+                        ⬆ Upload File
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg border border-[var(--border)] bg-white px-3.5 py-2 text-[13px] font-semibold hover:bg-slate-50"
+                      >
+                        🔗 Add URL
+                      </button>
+                    </div>
+                    <div className="mt-2 text-xs text-[var(--text-muted)]">
+                      Supported: CSV, JSON, PDF, TXT, Logs, External URLs
+                    </div>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-7 rounded-xl border border-[var(--border)] bg-[var(--card-muted)] p-4">
+                  <div className="text-sm font-bold inline-flex items-center gap-2">
+                    <span aria-hidden="true">⛭</span> Research Filters
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">
+                        Date Range
+                      </label>
+                      <select
+                        value={filters.dateRange}
+                        onChange={(e) =>
+                          setFilters((f) => ({
+                            ...f,
+                            dateRange: e.target.value as ResearchFilters["dateRange"],
+                          }))
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                      >
+                        <option value="24h">Last 24h</option>
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">
+                        Region
+                      </label>
+                      <select
+                        value={filters.region}
+                        onChange={(e) =>
+                          setFilters((f) => ({
+                            ...f,
+                            region: e.target.value as ResearchFilters["region"],
+                          }))
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                      >
+                        <option value="global">Global</option>
+                        <option value="north-america">North America</option>
+                        <option value="europe">Europe</option>
+                        <option value="asia">Asia</option>
+                        <option value="africa">Africa</option>
+                        <option value="latin-america">Latin America</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">
+                        Language
+                      </label>
+                      <select
+                        value={filters.language}
+                        onChange={(e) =>
+                          setFilters((f) => ({
+                            ...f,
+                            language: e.target.value as ResearchFilters["language"],
+                          }))
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                      >
+                        <option value="all">All</option>
+                        <option value="english">English</option>
+                        <option value="spanish">Spanish</option>
+                        <option value="french">French</option>
+                        <option value="arabic">Arabic</option>
+                        <option value="mandarin">Mandarin</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">
+                        Content Type
+                      </label>
+                      <select
+                        value={filters.contentType}
+                        onChange={(e) =>
+                          setFilters((f) => ({
+                            ...f,
+                            contentType: e.target.value as ResearchFilters["contentType"],
+                          }))
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                      >
+                        <option value="all">All</option>
+                        <option value="text">Text</option>
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                        <option value="audio">Audio</option>
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">
+                        Risk Category
+                      </label>
+                      <select
+                        value={filters.riskCategory}
+                        onChange={(e) =>
+                          setFilters((f) => ({
+                            ...f,
+                            riskCategory: e.target.value as ResearchFilters["riskCategory"],
+                          }))
+                        }
+                        className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                      >
+                        <option value="all">All</option>
+                        <option value="hate-speech">Hate Speech</option>
+                        <option value="misinformation">Misinformation</option>
+                        <option value="scams">Scams</option>
+                        <option value="political">Political</option>
+                        <option value="violence">Violence</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+                <div className="text-sm font-bold inline-flex items-center gap-2">
+                  <span aria-hidden="true">⚙</span> Research Mode
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2">
+                  {[
+                    { key: "quick" as const, title: "Quick Insight", desc: "Fast summary, minimal depth" },
+                    { key: "deep" as const, title: "Deep Research", desc: "Full model execution + correlations" },
+                    { key: "predictive" as const, title: "Predictive Analysis", desc: "Forecast-focused results" },
+                  ].map((m) => {
+                    const active = mode === m.key;
+                    return (
+                      <label
+                        key={m.key}
+                        className={`block cursor-pointer rounded-xl border px-4 py-3 transition ${
+                          active
+                            ? "border-emerald-200 bg-emerald-50"
+                            : "border-[var(--border)] bg-white hover:bg-slate-50"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="mode"
+                          value={m.key}
+                          checked={mode === m.key}
+                          onChange={() => setMode(m.key)}
+                          className="sr-only"
+                        />
+                        <div className="text-sm font-semibold">
+                          {active ? "🔵 " : "⚪ "}
+                          {m.title}
+                        </div>
+                        <div className="mt-0.5 text-xs text-[var(--text-muted)]">{m.desc}</div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        {/* SECTION 2 — AI Insight Summary */}
+        <section className="rounded-[var(--radius)] border border-[var(--border)] bg-emerald-50/60 p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 rounded-lg bg-emerald-700 grid place-items-center text-white">
+                <span aria-hidden="true">🧠</span>
+              </div>
+              <div>
+                <div className="text-lg font-bold">AI Insight Summary</div>
+                <div className="text-sm text-[var(--text-muted)]">Intelligence Layer</div>
+              </div>
+            </div>
+            <Badge tone="success">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              Live
+            </Badge>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-[var(--border)] bg-white p-4 text-sm leading-relaxed text-[var(--text)]">
+            {explanation?.summary ??
+              "Run research to generate a live, model-driven explanation for the current filters."}
+          </div>
+
+          <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-sm text-[var(--text-muted)] inline-flex items-center gap-3">
               {explanation ? (
                 <>
-                  <span className="font-semibold text-[var(--text)]">
-                    Confidence: {explanation.confidence}%
+                  <span className="inline-flex items-center gap-2">
+                    Confidence: <span className="h-2 w-2 rounded-full bg-emerald-500" />{" "}
+                    <span className="font-semibold text-[var(--text)]">{explanation.confidence}%</span>
                   </span>
-                  <span>•</span>
-                  <span>{updatedLabel ?? "Updating…"}</span>
+                  <span className="inline-flex items-center gap-2">
+                    🕐 <span>{updatedLabel ?? "Updating…"}</span>
+                  </span>
                 </>
               ) : (
-                <span>Loading intelligence snapshot…</span>
+                <span>Loading…</span>
               )}
             </div>
             <button
               type="button"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
-              onClick={() => runResearch()}
-              disabled={loading}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
+              onClick={() => setReportOpen(true)}
+              disabled={!snapshot}
             >
-              {loading ? "Refreshing…" : "Generate Report"}
+              📋 Generate Report
             </button>
           </div>
-
-          {error ? (
-            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {error}
-            </div>
-          ) : null}
         </section>
 
         <section className="glass rounded-[var(--radius)] p-5">
@@ -414,13 +820,30 @@ export default function Home() {
                   Model 5 · {graph?.subtitle ?? "Powered by Graph Intelligence"}
                 </div>
               </div>
-              {graph ? (
-                <Badge tone="warning">⚠ {graph.suspiciousClusters} suspicious clusters</Badge>
-              ) : null}
+              <span className="rounded-full border border-[var(--border)] bg-[var(--card-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--text-muted)]">
+                MODEL 5
+              </span>
             </div>
 
             {graph ? (
               <>
+              <div className="mt-2 flex flex-wrap items-center gap-5 text-xs text-[var(--text-muted)]">
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-rose-400" />
+                  <span className="font-semibold text-rose-600">
+                    {graph.suspiciousClusters} Suspicious Clusters
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-amber-400" />
+                  Coordinated Activity Detected
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-sky-400" />
+                  Shared IP/Device Detected
+                </span>
+              </div>
+
               <div className="mt-4">
                   <CoordinationNetwork
                     nodes={graph.graph.nodes}
@@ -429,28 +852,31 @@ export default function Home() {
                   height={260}
                 />
                 </div>
-              <div className="mt-3 flex flex-wrap gap-3 text-xs text-[var(--text-muted)]">
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-rose-400" /> High risk
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-amber-400" /> Medium risk
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" /> Safe
-                </span>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {graph.insights.slice(0, 3).map((i) => (
+                  <span
+                    key={i}
+                    className="rounded-full border border-[var(--border)] bg-[var(--card-muted)] px-3 py-1 text-xs font-semibold text-[var(--text)]"
+                  >
+                    {i}
+                  </span>
+                ))}
               </div>
 
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {graph.insights.map((i) => (
-                    <div
-                      key={i}
-                    className="rounded-xl border border-[var(--border)] bg-[var(--card-muted)] px-3.5 py-3 text-sm"
-                    >
-                      {i}
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-[var(--text-muted)]">
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-rose-400" /> High Risk (≥70)
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-amber-400" /> Medium Risk (40–69)
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" /> Low Risk (&lt;40)
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-slate-500" /> Suspicious Node
+                </span>
+              </div>
               </>
             ) : (
             <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--card-muted)] p-4 text-sm text-[var(--text-muted)]">
@@ -545,18 +971,25 @@ export default function Home() {
           style={{ background: "rgba(0,0,0,0.55)" }}
         >
           <div className="w-full max-w-[720px] max-h-[min(92vh,820px)] rounded-[var(--radius)] glass overflow-hidden flex flex-col">
-            <div className="px-5 py-4 border-b border-[var(--border)] bg-black/25 flex items-start justify-between gap-4">
+            <div
+              className="px-5 py-4 border-b border-emerald-700/20 text-white flex items-start justify-between gap-4"
+              style={{ background: "linear-gradient(135deg, #0D9488 0%, #059669 100%)" }}
+            >
               <div>
-                <div className="text-base font-bold">Intelligence Report</div>
-                <div className="text-xs text-[var(--text-muted)]">
-                  {snapshot ? fmtAgo(snapshot.explanation.updatedAt) : "No snapshot yet"}
+                <div className="text-base font-bold inline-flex items-center gap-2">
+                  <span aria-hidden="true">📄</span> Intelligence Report
+                </div>
+                <div className="text-xs text-white/85">
+                  {snapshot?.explanation.updatedAt
+                    ? `Generated ${formatGeneratedAt(snapshot.explanation.updatedAt)}`
+                    : "No snapshot yet"}
                 </div>
               </div>
               <button
                 ref={closeXRef}
                 type="button"
                 aria-label="Close"
-                className="h-[34px] w-[34px] rounded-lg border border-[var(--border)] bg-white/5 hover:bg-white/10 text-[var(--text)] flex items-center justify-center"
+                className="h-[34px] w-[34px] rounded-lg border border-white/25 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
                 onClick={() => setReportOpen(false)}
               >
                 ×
@@ -568,73 +1001,131 @@ export default function Home() {
                 Guardian AI Intelligence Report
               </h2>
 
-              <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
-                <Badge tone="neutral">Report Type: AI Insight Summary</Badge>
-                <Badge tone="info">Mode: {mode.toUpperCase()}</Badge>
-                {snapshot ? (
-                  <Badge tone="success">Confidence: {snapshot.explanation.confidence}%</Badge>
-                ) : null}
+              <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex flex-wrap gap-2 text-xs text-[var(--text-muted)]">
+                  <span className="rounded-full border border-[var(--border)] bg-white px-2.5 py-1 font-semibold">
+                    Report Type: AI Insight Summary
+                  </span>
+                  <span className="rounded-full border border-[var(--border)] bg-white px-2.5 py-1 font-semibold">
+                    Generated:{" "}
+                    {snapshot?.explanation.updatedAt
+                      ? new Date(snapshot.explanation.updatedAt).toLocaleDateString()
+                      : "—"}
+                  </span>
+                  <span className="rounded-full border border-[var(--border)] bg-white px-2.5 py-1 font-semibold">
+                    Last Updated: {updatedLabel ?? "—"}
+                  </span>
+                </div>
+                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Confidence: {snapshot?.explanation.confidence ?? "—"}%
+                </span>
               </div>
 
-              <div className="mt-5 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                Executive Summary
-              </div>
-              <div className="mt-2 rounded-xl border border-[var(--border)] bg-black/25 p-4 text-sm leading-relaxed">
+              <div className="mt-5 text-sm font-bold">📋 Executive Summary</div>
+              <div className="mt-2 rounded-xl border border-[var(--border)] bg-white p-4 text-sm leading-relaxed">
                 {snapshot?.explanation.summary ??
                   "Run research to generate a report from live model outputs."}
               </div>
 
               {snapshot ? (
                 <>
-                  <div className="mt-5 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                    Key Findings (Model Sources)
-                  </div>
-                  <div className="mt-2 space-y-2">
-                    {snapshot.explanation.reasoningBullets.map((b) => (
+                  <div className="mt-5 text-sm font-bold">🔍 Key Findings</div>
+                  <div className="mt-2 grid grid-cols-1 gap-2">
+                    {snapshot.explanation.reasoningBullets.slice(0, 3).map((b) => (
                       <div
                         key={b}
-                        className="rounded-xl border border-[var(--border)] bg-white/5 px-4 py-3 text-sm"
+                        className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
                       >
-                        {b}
+                        <div className="flex items-start gap-2">
+                          <span className="mt-0.5 text-emerald-600 font-bold" aria-hidden="true">
+                            ↗
+                          </span>
+                          <span>{b}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="mt-5 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                    Recommended Actions
-                  </div>
-                  <div className="mt-2 rounded-xl border border-amber-400/25 bg-amber-400/10 p-4">
+                  <div className="mt-5 text-sm font-bold">🛡 Recommended Actions</div>
+                  <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <ul className="m-0 p-0 list-none space-y-2 text-sm">
                       {snapshot.explanation.recommendedActions.map((a) => (
                         <li key={a} className="flex items-start gap-2">
-                          <span className="mt-0.5 font-bold text-amber-200">✓</span>
+                          <span className="mt-0.5 font-bold text-amber-700">✓</span>
                           <span>{a}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
+
+                  <div className="mt-5 text-xs text-[var(--text-muted)] space-y-1">
+                    <div>
+                      <span className="font-semibold">Data Sources:</span>{" "}
+                      {enabledSources.length ? enabledSources.join(", ") : "—"}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Models Used:</span> T5/Pegasus (Summarization), LSTM (Trends),
+                      LDA/BERTopic (Topics), ML Classification (Health Scoring)
+                    </div>
+                    <div>
+                      <span className="font-semibold">Confidence Level:</span>{" "}
+                      {snapshot.explanation.confidence}% (High)
+                    </div>
+                    <div>
+                      <span className="font-semibold">Report ID:</span> {reportId ?? "—"}
+                    </div>
+                  </div>
                 </>
               ) : null}
             </div>
 
-            <div className="px-5 py-3 border-t border-[var(--border)] bg-black/25 flex items-center justify-between gap-3 flex-wrap">
+            <div className="px-5 py-3 border-t border-[var(--border)] bg-[var(--card-muted)] flex items-center justify-between gap-3 flex-wrap">
               <div className="text-xs text-[var(--text-muted)] max-w-[360px]">
-                This report is confidential and intended for authorized personnel only.
+                ℹ This report is confidential and intended for authorized personnel only
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="rounded-lg border border-[var(--border)] bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10"
+                  className="rounded-lg border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
                   onClick={() => setReportOpen(false)}
                 >
                   Close
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-black hover:brightness-110 disabled:opacity-60"
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
                   disabled={!snapshot}
+                  onClick={() => {
+                    if (!snapshot) return;
+                    const lines = [
+                      "Guardian AI Intelligence Report",
+                      `Report ID: ${reportId ?? "—"}`,
+                      `Generated: ${
+                        snapshot.explanation.updatedAt
+                          ? formatGeneratedAt(snapshot.explanation.updatedAt)
+                          : "—"
+                      }`,
+                      `Confidence: ${snapshot.explanation.confidence}%`,
+                      "",
+                      "Executive Summary:",
+                      snapshot.explanation.summary,
+                      "",
+                      "Key Findings:",
+                      ...snapshot.explanation.reasoningBullets.map((b) => `- ${b}`),
+                      "",
+                      "Recommended Actions:",
+                      ...snapshot.explanation.recommendedActions.map((a) => `- ${a}`),
+                      "",
+                      `Data Sources: ${enabledSources.length ? enabledSources.join(", ") : "—"}`,
+                    ];
+                    downloadText(
+                      `guardian-ai-report-${reportId ?? "latest"}.txt`,
+                      lines.join("\n"),
+                    );
+                  }}
                 >
-                  Download Report
+                  ⬇ Download Report
                 </button>
               </div>
             </div>

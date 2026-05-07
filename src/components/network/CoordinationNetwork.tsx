@@ -94,7 +94,7 @@ export function CoordinationNetwork({
         aria-label="Coordination network graph"
         className="block"
         style={{
-          background: "var(--card-muted)",
+          background: "var(--card)",
           borderRadius: 12,
           border: "1px solid var(--border)",
         }}
@@ -129,7 +129,7 @@ export function CoordinationNetwork({
               y1={a.y}
               x2={b.x}
               y2={b.y}
-              stroke="rgba(100,116,139,0.22)"
+              stroke="rgba(148,163,184,0.55)"
               strokeWidth="1"
             />
           );
