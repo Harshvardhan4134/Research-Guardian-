@@ -10,6 +10,8 @@ export type DataSourcesSelection = {
 
 export type ResearchFilters = {
   dateRange: "24h" | "7d" | "30d" | "custom";
+  customStart?: string; // ISO date (YYYY-MM-DD)
+  customEnd?: string; // ISO date (YYYY-MM-DD)
   region:
     | "global"
     | "north-america"

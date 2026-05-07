@@ -73,6 +73,8 @@ const DEFAULT_SOURCES: DataSourcesSelection = {
 
 const DEFAULT_FILTERS: ResearchFilters = {
   dateRange: "7d",
+  customStart: undefined,
+  customEnd: undefined,
   region: "global",
   language: "all",
   contentType: "all",
@@ -122,6 +124,10 @@ export default function Home() {
     );
     url.searchParams.set("src_external", sources.externalThreatFeeds ? "1" : "0");
     url.searchParams.set("dateRange", filters.dateRange);
+    if (filters.dateRange === "custom") {
+      if (filters.customStart) url.searchParams.set("customStart", filters.customStart);
+      if (filters.customEnd) url.searchParams.set("customEnd", filters.customEnd);
+    }
     url.searchParams.set("region", filters.region);
     url.searchParams.set("language", filters.language);
     url.searchParams.set("contentType", filters.contentType);
@@ -154,6 +160,16 @@ export default function Home() {
     runResearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!snapshot) return;
+    if (loading) return;
+    const id = window.setTimeout(() => {
+      runResearch({ silent: true });
+    }, 350);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, JSON.stringify(sources), JSON.stringify(filters)]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -243,9 +259,19 @@ export default function Home() {
             </button>
             <button
               type="button"
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 transition"
               onClick={() => setReportOpen(true)}
               disabled={!snapshot}
+              style={{
+                background: "var(--navy)",
+                transition: "background 0.25s ease",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--navy-hover)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--navy)";
+              }}
             >
               ⬇ Export Data
             </button>
@@ -262,7 +288,7 @@ export default function Home() {
             onClick={() => setConsoleOpen((v) => !v)}
             aria-expanded={consoleOpen}
             style={{
-              background: "linear-gradient(135deg, #0B1220 0%, #0F2A6B 55%, #0B1220 100%)",
+              background: "linear-gradient(135deg, var(--navy) 0%, #0f2a6b 55%, var(--navy) 100%)",
             }}
           >
             <div className="flex items-start gap-3 min-w-[260px]">
@@ -301,7 +327,8 @@ export default function Home() {
                   placeholder={
                     "Examples:\n- Why did hate speech spike last weekend?\n- Analyze misinformation trends around elections (last 30 days)\n- Identify emerging scam or fraud patterns\n- Predict risk growth for political content next week"
                   }
-                  className="w-full min-h-[150px] max-h-[320px] resize-y rounded-xl border border-[var(--border)] bg-white px-4 py-4 pb-8 text-sm leading-relaxed outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                  className="w-full min-h-[150px] max-h-[320px] resize-y rounded-xl border border-[var(--border-soft)] bg-[var(--card-elevated)] px-4 py-4 pb-8 text-sm leading-relaxed outline-none focus:ring-2"
+                  style={{ boxShadow: "inset 0 1px 0 rgba(15,23,42,0.03)" }}
                 />
                 <div className="absolute bottom-2 right-3 text-xs text-[var(--text-muted)]">
                   {charCountLabel}
@@ -326,9 +353,19 @@ export default function Home() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
+                    className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 transition"
                     onClick={() => runResearch()}
                     disabled={loading || query.trim().length === 0}
+                    style={{
+                      background: "var(--navy)",
+                      transition: "background 0.25s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = "var(--navy-hover)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = "var(--navy)";
+                    }}
                   >
                     ▶ Run Research
                   </button>
@@ -365,7 +402,7 @@ export default function Home() {
               ) : null}
 
               <div className="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
-                <div className="lg:col-span-5 rounded-xl border border-[var(--border)] bg-[var(--card-muted)] p-4">
+                <div className="lg:col-span-5 rounded-xl border border-[var(--border-soft)] bg-[var(--bg-section)] p-4">
                   <div className="text-sm font-bold inline-flex items-center gap-2">
                     <span aria-hidden="true">🗄️</span> Data Sources for Research
                   </div>
@@ -384,7 +421,8 @@ export default function Home() {
                           onChange={(e) =>
                             setSources((s) => ({ ...s, [row.key]: e.target.checked }))
                           }
-                          className="h-[18px] w-[18px] accent-emerald-600"
+                          className="h-[18px] w-[18px]"
+                          style={{ accentColor: "var(--accent)" }}
                         />
                         <span className="text-[var(--text)]">{row.label}</span>
                       </label>
@@ -415,7 +453,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="lg:col-span-7 rounded-xl border border-[var(--border)] bg-[var(--card-muted)] p-4">
+                <div className="lg:col-span-7 rounded-xl border border-[var(--border-soft)] bg-[var(--bg-section)] p-4">
                   <div className="text-sm font-bold inline-flex items-center gap-2">
                     <span aria-hidden="true">⛭</span> Research Filters
                   </div>
@@ -432,7 +470,7 @@ export default function Home() {
                             dateRange: e.target.value as ResearchFilters["dateRange"],
                           }))
                         }
-                        className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                        className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--card-elevated)] px-3 py-2 text-sm outline-none focus:ring-2"
                       >
                         <option value="24h">Last 24h</option>
                         <option value="7d">Last 7 days</option>
@@ -440,6 +478,37 @@ export default function Home() {
                         <option value="custom">Custom</option>
                       </select>
                     </div>
+
+                    {filters.dateRange === "custom" ? (
+                      <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">
+                            Start Date
+                          </label>
+                          <input
+                            type="date"
+                            value={filters.customStart ?? ""}
+                            onChange={(e) =>
+                              setFilters((f) => ({ ...f, customStart: e.target.value || undefined }))
+                            }
+                            className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--card-elevated)] px-3 py-2 text-sm outline-none focus:ring-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">
+                            End Date
+                          </label>
+                          <input
+                            type="date"
+                            value={filters.customEnd ?? ""}
+                            onChange={(e) =>
+                              setFilters((f) => ({ ...f, customEnd: e.target.value || undefined }))
+                            }
+                            className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--card-elevated)] px-3 py-2 text-sm outline-none focus:ring-2"
+                          />
+                        </div>
+                      </div>
+                    ) : null}
 
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-1">
@@ -453,7 +522,7 @@ export default function Home() {
                             region: e.target.value as ResearchFilters["region"],
                           }))
                         }
-                        className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                        className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--card-elevated)] px-3 py-2 text-sm outline-none focus:ring-2"
                       >
                         <option value="global">Global</option>
                         <option value="north-america">North America</option>
@@ -476,7 +545,7 @@ export default function Home() {
                             language: e.target.value as ResearchFilters["language"],
                           }))
                         }
-                        className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                        className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--card-elevated)] px-3 py-2 text-sm outline-none focus:ring-2"
                       >
                         <option value="all">All</option>
                         <option value="english">English</option>
@@ -499,7 +568,7 @@ export default function Home() {
                             contentType: e.target.value as ResearchFilters["contentType"],
                           }))
                         }
-                        className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                        className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--card-elevated)] px-3 py-2 text-sm outline-none focus:ring-2"
                       >
                         <option value="all">All</option>
                         <option value="text">Text</option>
@@ -521,7 +590,7 @@ export default function Home() {
                             riskCategory: e.target.value as ResearchFilters["riskCategory"],
                           }))
                         }
-                        className="w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--border-strong)]"
+                        className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--card-elevated)] px-3 py-2 text-sm outline-none focus:ring-2"
                       >
                         <option value="all">All</option>
                         <option value="hate-speech">Hate Speech</option>
@@ -551,7 +620,7 @@ export default function Home() {
                         key={m.key}
                         className={`block cursor-pointer rounded-xl border px-4 py-3 transition ${
                           active
-                            ? "border-emerald-200 bg-emerald-50"
+                            ? "border-[var(--border-soft)] bg-[var(--bg-section)]"
                             : "border-[var(--border)] bg-white hover:bg-slate-50"
                         }`}
                       >
@@ -578,10 +647,13 @@ export default function Home() {
         </section>
 
         {/* SECTION 2 — AI Insight Summary */}
-        <section className="rounded-[var(--radius)] border border-[var(--border)] bg-emerald-50/60 p-5 shadow-sm">
+        <section className="rounded-[var(--radius)] border border-[var(--border-soft)] bg-[var(--bg-section)] p-5 shadow-sm">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-lg bg-emerald-700 grid place-items-center text-white">
+              <div
+                className="h-9 w-9 rounded-lg grid place-items-center text-white"
+                style={{ background: "var(--navy)" }}
+              >
                 <span aria-hidden="true">🧠</span>
               </div>
               <div>
@@ -589,8 +661,8 @@ export default function Home() {
                 <div className="text-sm text-[var(--text-muted)]">Intelligence Layer</div>
               </div>
             </div>
-            <Badge tone="success">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <Badge tone="info">
+              <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />
               Live
             </Badge>
           </div>
@@ -605,7 +677,8 @@ export default function Home() {
               {explanation ? (
                 <>
                   <span className="inline-flex items-center gap-2">
-                    Confidence: <span className="h-2 w-2 rounded-full bg-emerald-500" />{" "}
+                    Confidence:{" "}
+                    <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />{" "}
                     <span className="font-semibold text-[var(--text)]">{explanation.confidence}%</span>
                   </span>
                   <span className="inline-flex items-center gap-2">
@@ -618,9 +691,19 @@ export default function Home() {
             </div>
             <button
               type="button"
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 transition"
               onClick={() => setReportOpen(true)}
               disabled={!snapshot}
+              style={{
+                background: "var(--navy)",
+                transition: "background 0.25s ease",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--navy-hover)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--navy)";
+              }}
             >
               📋 Generate Report
             </button>
@@ -653,7 +736,7 @@ export default function Home() {
                   <span className="h-2 w-2 rounded-full bg-violet-400" /> Scams +{topic.growth.scams}%
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" /> Normal {topic.growth.normal}%
+                <span className="h-2 w-2 rounded-full bg-slate-400" /> Normal {topic.growth.normal}%
                 </span>
               </div>
 
@@ -846,7 +929,7 @@ export default function Home() {
                   Coordinated Activity Detected
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-sky-400" />
+                  <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />
                   Shared IP/Device Detected
                 </span>
               </div>
@@ -878,7 +961,7 @@ export default function Home() {
                   <span className="h-2 w-2 rounded-full bg-amber-400" /> Medium Risk (40–69)
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" /> Low Risk (&lt;40)
+                  <span className="h-2 w-2 rounded-full bg-slate-400" /> Low Risk (&lt;40)
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-slate-500" /> Suspicious Node
@@ -979,8 +1062,11 @@ export default function Home() {
         >
           <div className="w-full max-w-[720px] max-h-[min(92vh,820px)] rounded-[var(--radius)] glass overflow-hidden flex flex-col">
             <div
-              className="px-5 py-4 border-b border-emerald-700/20 text-white flex items-start justify-between gap-4"
-              style={{ background: "linear-gradient(135deg, #0D9488 0%, #059669 100%)" }}
+              className="px-5 py-4 border-b text-white flex items-start justify-between gap-4"
+              style={{
+                background: "linear-gradient(135deg, var(--navy) 0%, var(--navy-hover) 100%)",
+                borderColor: "rgba(203,213,225,0.25)",
+              }}
             >
               <div>
                 <div className="text-base font-bold inline-flex items-center gap-2">
@@ -1023,8 +1109,8 @@ export default function Home() {
                     Last Updated: {updatedLabel ?? "—"}
                   </span>
                 </div>
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border-soft)] bg-white px-3 py-1 text-xs font-semibold text-[var(--navy)]">
+                  <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />
                   Confidence: {snapshot?.explanation.confidence ?? "—"}%
                 </span>
               </div>
@@ -1045,7 +1131,7 @@ export default function Home() {
                         className="rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
                       >
                         <div className="flex items-start gap-2">
-                          <span className="mt-0.5 text-emerald-600 font-bold" aria-hidden="true">
+                          <span className="mt-0.5 font-bold" style={{ color: "var(--accent)" }} aria-hidden="true">
                             ↗
                           </span>
                           <span>{b}</span>
@@ -1101,7 +1187,7 @@ export default function Home() {
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60"
+                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 transition"
                   disabled={!snapshot}
                   onClick={() => {
                     if (!snapshot) return;
@@ -1130,6 +1216,16 @@ export default function Home() {
                       `guardian-ai-report-${reportId ?? "latest"}.txt`,
                       lines.join("\n"),
                     );
+                  }}
+                  style={{
+                    background: "var(--navy)",
+                    transition: "background 0.25s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "var(--navy-hover)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = "var(--navy)";
                   }}
                 >
                   ⬇ Download Report

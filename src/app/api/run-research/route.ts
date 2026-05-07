@@ -46,6 +46,8 @@ export async function GET(req: NextRequest) {
 
   const filters: ResearchFilters = {
     dateRange: getEnum(sp, "dateRange", ["24h", "7d", "30d", "custom"], "7d"),
+    customStart: sp.get("customStart") ?? undefined,
+    customEnd: sp.get("customEnd") ?? undefined,
     region: getEnum(
       sp,
       "region",
