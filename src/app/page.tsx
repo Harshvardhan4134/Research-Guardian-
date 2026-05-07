@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { MultiLineChart } from "@/components/charts/MultiLineChart";
@@ -268,25 +269,14 @@ export default function Home() {
       <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-white/80 backdrop-blur-xl">
         <div className="mx-auto max-w-[1200px] px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div
-              className="h-10 w-10 rounded-xl border border-[var(--border)] bg-white grid place-items-center"
-              aria-hidden="true"
-              style={{ boxShadow: "var(--shadow)" }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M12 2.2l8.2 4.7v10.2L12 21.8 3.8 17.1V6.9L12 2.2Z"
-                  stroke="rgba(13,148,136,0.95)"
-                  strokeWidth="1.8"
-                />
-                <path
-                  d="M7.6 10.4c1.3-2.2 4.9-2.9 7.1-1.1 2.3 1.9 2.1 5.7-.6 7.2-2.7 1.5-6.1.1-6.9-2.4"
-                  stroke="rgba(37,99,235,0.9)"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
+            <Image
+              src="/guardian-logo.png"
+              alt="Guardian AI"
+              width={210}
+              height={70}
+              priority
+              className="h-10 w-auto"
+            />
             <div className="leading-tight">
               <div className="text-base font-bold tracking-[-0.02em]">Guardian AI</div>
               <div className="text-[12px] text-[var(--text-muted)]">
