@@ -99,7 +99,12 @@ export default function Home() {
   >([]);
 
   const [reportOpen, setReportOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const closeXRef = useRef<HTMLButtonElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefreshMs, setAutoRefreshMs] = useState(10_000);
 
   const charCountLabel = useMemo(
     () => `${query.length.toLocaleString()} / 2,000`,
@@ -172,22 +177,24 @@ export default function Home() {
   }, [mode, JSON.stringify(sources), JSON.stringify(filters)]);
 
   useEffect(() => {
+    if (!autoRefresh) return;
     const id = window.setInterval(() => {
       if (!snapshot) return;
       if (loading) return;
       runResearch({ silent: true });
-    }, 10_000);
+    }, autoRefreshMs);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot, loading, mode, query, JSON.stringify(sources), JSON.stringify(filters)]);
+  }, [snapshot, loading, autoRefresh, autoRefreshMs]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && reportOpen) setReportOpen(false);
+      if (e.key === "Escape" && settingsOpen) setSettingsOpen(false);
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [reportOpen]);
+  }, [reportOpen, settingsOpen]);
 
   useEffect(() => {
     if (reportOpen) closeXRef.current?.focus();
@@ -216,6 +223,45 @@ export default function Home() {
     if (sources.externalThreatFeeds) out.push("External Threat & Trend Feeds");
     return out;
   }, [sources]);
+
+  function exportSnapshot() {
+    if (!snapshot) return;
+    const filename = `guardian-ai-export-${reportId ?? "latest"}.json`;
+    downloadText(filename, JSON.stringify(snapshot, null, 2));
+  }
+
+  async function ingestExternalText(label: string, text: string) {
+    const cleaned = text.trim().slice(0, 6000);
+    if (!cleaned) return;
+    setQuery((q) => {
+      const next = `${q.trim()}\n\n[External Input: ${label}]\n${cleaned}\n`.slice(0, 2000);
+      return next;
+    });
+    window.setTimeout(() => runResearch(), 0);
+  }
+
+  async function onUploadFilePicked(file: File) {
+    const maxBytes = 300_000;
+    if (file.size > maxBytes) {
+      setError(`File too large (${Math.round(file.size / 1024)}KB). Max is ${Math.round(maxBytes / 1024)}KB.`);
+      return;
+    }
+    const text = await file.text();
+    await ingestExternalText(file.name, text);
+  }
+
+  async function addUrlFlow() {
+    const url = window.prompt("Paste a URL to ingest");
+    if (!url) return;
+    try {
+      setError(null);
+      const res = await fetch(url);
+      const txt = await res.text();
+      await ingestExternalText(url, txt);
+    } catch {
+      await ingestExternalText(url, `URL: ${url}`);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text)]">
@@ -253,14 +299,14 @@ export default function Home() {
             <button
               type="button"
               className="text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text)] px-2 py-2"
-              onClick={() => setReportOpen(true)}
+              onClick={() => setSettingsOpen(true)}
             >
               ⚙ Settings
             </button>
             <button
               type="button"
               className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 transition"
-              onClick={() => setReportOpen(true)}
+              onClick={exportSnapshot}
               disabled={!snapshot}
               style={{
                 background: "var(--navy)",
@@ -437,12 +483,14 @@ export default function Home() {
                       <button
                         type="button"
                         className="rounded-lg border border-[var(--border)] bg-white px-3.5 py-2 text-[13px] font-semibold hover:bg-slate-50"
+                      onClick={() => fileInputRef.current?.click()}
                       >
                         ⬆ Upload File
                       </button>
                       <button
                         type="button"
                         className="rounded-lg border border-[var(--border)] bg-white px-3.5 py-2 text-[13px] font-semibold hover:bg-slate-50"
+                      onClick={() => void addUrlFlow()}
                       >
                         🔗 Add URL
                       </button>
@@ -603,6 +651,19 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".txt,.csv,.json,.md,text/plain,application/json,text/csv"
+                onChange={(e) => {
+                  const file = e.currentTarget.files?.[0];
+                  if (!file) return;
+                  void onUploadFilePicked(file);
+                  e.currentTarget.value = "";
+                }}
+              />
 
               <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
                 <div className="text-sm font-bold inline-flex items-center gap-2">
@@ -1231,6 +1292,106 @@ export default function Home() {
                   ⬇ Download Report
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {settingsOpen ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settings-title"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setSettingsOpen(false);
+          }}
+          style={{ background: "rgba(0,0,0,0.55)" }}
+        >
+          <div className="w-full max-w-[560px] rounded-[var(--radius)] glass overflow-hidden flex flex-col">
+            <div
+              className="px-5 py-4 border-b text-white flex items-start justify-between gap-4"
+              style={{
+                background: "linear-gradient(135deg, var(--navy) 0%, var(--navy-hover) 100%)",
+                borderColor: "rgba(203,213,225,0.25)",
+              }}
+            >
+              <div>
+                <div id="settings-title" className="text-base font-bold">
+                  Settings
+                </div>
+                <div className="text-xs text-white/85">Dashboard behavior</div>
+              </div>
+              <button
+                type="button"
+                aria-label="Close"
+                className="h-[34px] w-[34px] rounded-lg border border-white/25 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center"
+                onClick={() => setSettingsOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <label className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-soft)] bg-[var(--card-elevated)] px-4 py-3">
+                <div>
+                  <div className="text-sm font-semibold text-[var(--text)]">Auto refresh</div>
+                  <div className="text-xs text-[var(--text-muted)]">
+                    Periodically refresh charts while the page is open
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  style={{ accentColor: "var(--accent)" }}
+                  className="h-[18px] w-[18px]"
+                />
+              </label>
+
+              <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--card-elevated)] px-4 py-3">
+                <div className="text-sm font-semibold text-[var(--text)]">Refresh interval</div>
+                <div className="mt-2 flex items-center gap-2">
+                  <select
+                    value={autoRefreshMs}
+                    onChange={(e) => setAutoRefreshMs(Number(e.target.value))}
+                    className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--card-elevated)] px-3 py-2 text-sm outline-none focus:ring-2"
+                  >
+                    <option value={5_000}>Every 5s</option>
+                    <option value={10_000}>Every 10s</option>
+                    <option value={30_000}>Every 30s</option>
+                    <option value={60_000}>Every 60s</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-lg px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-60 transition"
+                    style={{
+                      background: "var(--navy)",
+                      transition: "background 0.25s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = "var(--navy-hover)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = "var(--navy)";
+                    }}
+                    onClick={() => runResearch()}
+                    disabled={loading}
+                  >
+                    Refresh now
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-[var(--border-soft)] bg-[var(--bg-section)] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-[var(--border-soft)] bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+                onClick={() => setSettingsOpen(false)}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
