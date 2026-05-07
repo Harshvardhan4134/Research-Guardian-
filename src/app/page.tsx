@@ -82,7 +82,9 @@ const DEFAULT_FILTERS: ResearchFilters = {
 export default function Home() {
   const [consoleOpen, setConsoleOpen] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(
+    "Why did hate speech spike last weekend? (last 7 days, global)",
+  );
   const [mode, setMode] = useState<ResearchMode>("quick");
   const [sources, setSources] = useState<DataSourcesSelection>(DEFAULT_SOURCES);
   const [filters, setFilters] = useState<ResearchFilters>(DEFAULT_FILTERS);
@@ -147,6 +149,11 @@ export default function Home() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    runResearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => {
